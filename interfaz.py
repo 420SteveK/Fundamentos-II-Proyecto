@@ -178,8 +178,9 @@ class VentanaPrincipal:
             titulo="Equipo 3",
             imagenes=["pateador3_1.png", "pateador3_2.png", "pateador3_3.png"],
             nombres=["Jugador3-1", "Jugador3-2", "Jugador3-3"],
+            sonido="sonidoequipo3.mp3",
             imagenes_porteros=["portero3_1.png", "portero3_2.png", "portero3_3.png"],
-            nombres_porteros=["Portero3-1", "Portero3-2", "Portero3-3"]
+            nombres_porteros=["Lana", "Mia", "Portero3-3"]
         )
 
     def ejecutar(self):
