@@ -3,6 +3,40 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import cv2
 import pygame
+import socket
+import threading
+
+class Raspberry:
+    def __init__ (self, ip="10.102.56.46", port=1717 ):
+        self.server_ip=ip
+        self.port=port
+        self.client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connected=False
+
+    def conected(self):
+        try:
+            self.client_socket.connect((self.server_ip, self.port))
+            self.conected=True
+            threading.Thread(target=self.receive_messages, daemon=True).start()
+            print("Conectado a Raspberry Pico W")
+        except Exception as e:
+            print(f"Error al conectar: {e}")
+
+
+    def receive_messages(self):
+        while True:
+            try:
+                msg = self.client_socket.recv(1024).decode()
+                print(f"Raspberry: {msg}")
+            except:
+                break
+
+    def close(self):
+        if self.connected:
+            self.client_socket.close()
+
+
+    
 class VentanaEquipo:
     def __init__(self, master, titulo, imagenes, nombres, sonido=None, video_path=None,
                  imagenes_porteros=None, nombres_porteros=None):
@@ -106,6 +140,8 @@ class VentanaPrincipal:
         self.label_fondo = tk.Label(self.ventana)
         self.label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
         self.actualizar_video()
+        self.rasp_control=Raspberry()
+        self.rasp_control.conected()
 
         # Botón "About"
         self.boton_about = tk.Button(self.ventana, text="About", command=self.About, bg="white")
@@ -167,7 +203,7 @@ class VentanaPrincipal:
             self.ventana,
             titulo="Equipo 2",
             imagenes=["pateador2_1.png", "pateador2_2.png", "pateador2_3.png"],
-            nombres=["Jugador2-1", "Jugador2-2", "Jugador2-3"],
+            nombres=["Jason good", "Luis Barboza", "Jugador2-3"],
             imagenes_porteros=["portero2_1.png", "portero2_2.png", "portero2_3.png"],
             nombres_porteros=["Portero2-1", "Portero2-2", "Portero2-3"]
         )
@@ -177,10 +213,10 @@ class VentanaPrincipal:
             self.ventana,
             titulo="Equipo 3",
             imagenes=["pateador3_1.png", "pateador3_2.png", "pateador3_3.png"],
-            nombres=["Jugador3-1", "Jugador3-2", "Jugador3-3"],
+            nombres=["Jhonny", "Ricardo", "Jordi"],
             sonido="sonidoequipo3.mp3",
             imagenes_porteros=["portero3_1.png", "portero3_2.png", "portero3_3.png"],
-            nombres_porteros=["Lana", "Mia", "Portero3-3"]
+            nombres_porteros=["Lana", "Mia", "LilMilk"]
         )
 
     def ejecutar(self):
