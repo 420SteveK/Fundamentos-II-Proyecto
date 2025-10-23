@@ -6,22 +6,22 @@ import pygame
 import socket
 import threading
 
+# -------------------- CLASE CONEXIÓN RASPBERRY --------------------
 class Raspberry:
-    def __init__ (self, ip="10.102.56.46", port=1717 ):
-        self.server_ip=ip
-        self.port=port
-        self.client_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connected=False
+    def __init__(self, ip="10.102.56.46", port=1717):
+        self.server_ip = ip
+        self.port = port
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connected = False
 
     def conected(self):
         try:
             self.client_socket.connect((self.server_ip, self.port))
-            self.conected=True
+            self.connected = True
             threading.Thread(target=self.receive_messages, daemon=True).start()
             print("Conectado a Raspberry Pico W")
         except Exception as e:
             print(f"Error al conectar: {e}")
-
 
     def receive_messages(self):
         while True:
@@ -35,11 +35,13 @@ class Raspberry:
         if self.connected:
             self.client_socket.close()
 
+# -------------------- VARIABLES GLOBALES DE EQUIPOS --------------------
+equipos_seleccionados = {"equipo1": None, "equipo2": None}
+equipo_actual = 1  # Controla si toca seleccionar el primer o segundo equipo
 
-    
+# -------------------- CLASE VENTANA EQUIPO --------------------
 class VentanaEquipo:
-    def __init__(self, master, titulo, imagenes, nombres, sonido=None, video_path=None,
-                 imagenes_porteros=None, nombres_porteros=None):
+    def __init__(self, master, titulo, imagenes, nombres, sonido=None, video_path=None, imagenes_porteros=None, nombres_porteros=None):
         self.master = master
         self.titulo = titulo
         self.imagenes = imagenes
@@ -48,6 +50,8 @@ class VentanaEquipo:
         self.video_path = video_path
         self.imagenes_porteros = imagenes_porteros or []
         self.nombres_porteros = nombres_porteros or []
+        self.jugador_seleccionado_nombre = None  # ### NUEVO ###
+        self.portero_seleccionado_nombre = None  # ### NUEVO ###
 
         self.master.withdraw()  # Oculta la ventana principal
 
@@ -59,7 +63,7 @@ class VentanaEquipo:
         # Reproducir sonido si existe
         if self.sonido:
             pygame.mixer.music.load(self.sonido)
-            pygame.mixer.music.play()
+            pygame.mixer.music.play(loops=-1)
 
         # Reproducir video de fondo
         self.cap = None
@@ -111,12 +115,54 @@ class VentanaEquipo:
             ).place(x=x, y=y, anchor="se")
 
     def jugador_seleccionado(self, nombre):
-        print(f"{nombre} seleccionado")
+        self.jugador_seleccionado_nombre = nombre
+        print(f"{nombre} seleccionado como jugador")
         messagebox.showinfo("Jugador seleccionado", f"{nombre}")
 
         # Mostrar porteros tras seleccionar jugador
         if self.imagenes_porteros and self.nombres_porteros:
-            self.mostrar_jugadores(self.imagenes_porteros, self.nombres_porteros)
+            self.mostrar_porteros()
+
+    def mostrar_porteros(self):
+        # Mostrar botones de porteros
+        self.imagenes_tk = []
+        posiciones = [(220, 400), (510, 400), (800, 400)]
+        for i, (img_path, nombre) in enumerate(zip(self.imagenes_porteros, self.nombres_porteros)):
+            img = ImageTk.PhotoImage(Image.open(img_path).resize((180, 275)))
+            self.imagenes_tk.append(img)
+            x, y = posiciones[i]
+            tk.Button(
+                self.ventana,
+                image=img,
+                borderwidth=0,
+                command=lambda n=nombre: self.portero_seleccionado(n)
+            ).place(x=x, y=y, anchor="se")
+
+    def portero_seleccionado(self, nombre):
+        global equipo_actual
+        self.portero_seleccionado_nombre = nombre
+        print(f"{nombre} seleccionado como portero")
+        messagebox.showinfo("Portero seleccionado", f"{nombre}")
+
+        # Guardar selección del equipo
+        if self.jugador_seleccionado_nombre and self.portero_seleccionado_nombre:
+            if equipo_actual == 1:
+                equipos_seleccionados["equipo1"] = {
+                    "jugador": self.jugador_seleccionado_nombre,
+                    "portero": self.portero_seleccionado_nombre
+                }
+                equipo_actual = 2
+                messagebox.showinfo("Equipo 1 listo", "Selecciona el segundo equipo")
+            elif equipo_actual == 2:
+                equipos_seleccionados["equipo2"] = {
+                    "jugador": self.jugador_seleccionado_nombre,
+                    "portero": self.portero_seleccionado_nombre
+                }
+                messagebox.showinfo("Equipos listos", "¡Ambos equipos están listos! Iniciando juego...")
+                print(equipos_seleccionados)
+                self.iniciar_juego()
+
+        self.cerrar_ventana()
 
     def cerrar_ventana(self):
         pygame.mixer.music.stop()
@@ -125,7 +171,64 @@ class VentanaEquipo:
         self.ventana.destroy()
         self.master.deiconify()  # Muestra la ventana principal
 
+    def iniciar_juego(self):
+        # Aquí puedes abrir tu ventana de juego real
+        messagebox.showinfo("Juego", f"Comienza el partido entre:\n\n"
+                            f"Equipo 1: {equipos_seleccionados['equipo1']}\n"
+                            f"Equipo 2: {equipos_seleccionados['equipo2']}")
 
+# -------------------- CLASE MENÚ PRINCIPAL --------------------
+class VentanaMenu:
+    def __init__(self):
+        pygame.mixer.init()
+        self.menu = tk.Tk()
+        self.menu.title("Menú Principal")
+        self.menu.geometry("850x478")
+
+        # Fondo del menú
+        self.cap = cv2.VideoCapture("fondo_futbolin1.mp4")
+        self.label_fondo = tk.Label(self.menu)
+        self.label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+        self.actualizar_fondo()
+
+        # Botón Play
+        self.boton_play = tk.Button(self.menu, text="Play", font=("Arial", 16), bg="white", command=self.ir_a_principal)
+        self.boton_play.place(x=425, y=200, anchor="center")
+
+        # Botón About
+        self.boton_about = tk.Button(self.menu, text="About", font=("Arial", 16), bg="white", command=self.About)
+        self.boton_about.place(x=425, y=280, anchor="center")
+
+    def actualizar_fondo(self):
+        ret, frame = self.cap.read()
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.resize(frame, (850, 478))
+            img = Image.fromarray(frame)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.label_fondo.imgtk = imgtk
+            self.label_fondo.config(image=imgtk)
+        else:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        self.menu.after(20, self.actualizar_fondo)
+
+    def About(self):
+        about = tk.Toplevel(self.menu)
+        about.title("About")
+        about.geometry("500x350")
+        tk.Label(about, text="Johan Jiménez Corella y Kendall Mena Arias",
+                 font=("Arial", 12)).pack(pady=40)
+
+    def ir_a_principal(self):
+        self.cap.release()
+        self.menu.destroy()
+        app = VentanaPrincipal()
+        app.ejecutar()
+
+    def ejecutar(self):
+        self.menu.mainloop()
+
+# -------------------- CLASE PRINCIPAL --------------------
 class VentanaPrincipal:
     def __init__(self):
         pygame.mixer.init()
@@ -140,7 +243,7 @@ class VentanaPrincipal:
         self.label_fondo = tk.Label(self.ventana)
         self.label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
         self.actualizar_video()
-        self.rasp_control=Raspberry()
+        self.rasp_control = Raspberry()
         self.rasp_control.conected()
 
         # Botón "About"
@@ -222,7 +325,7 @@ class VentanaPrincipal:
     def ejecutar(self):
         self.ventana.mainloop()
 
-
+# -------------------- EJECUCIÓN --------------------
 if __name__ == "__main__":
-    app = VentanaPrincipal()
-    app.ejecutar()
+    menu = VentanaMenu()
+    menu.ejecutar()
