@@ -270,6 +270,7 @@ class VentanaEquipo:
         update_progress(0)
 
 # -------------------- CLASE MENÚ PRINCIPAL --------------------
+# -------------------- CLASE MENÚ PRINCIPAL --------------------
 class VentanaMenu:
     def __init__(self):
         pygame.mixer.init()
@@ -288,12 +289,10 @@ class VentanaMenu:
         self.boton_play.place(x=425, y=200, anchor="center")
 
         # Botón About
-        self.boton_about = tk.Button(self.menu, text="About", font=("Arial", 16), bg="white", command=self.About)
-        self.boton_about.place(x=425, y=280, anchor="center")
+        self.boton_about = tk.Button(self.menu, text="About", font=("Arial", 12), bg="white", command=self.About)
+        self.boton_about.place(x=25, y=20, anchor="center")
 
     def actualizar_fondo(self):
-        if not hasattr(self, 'menu'):
-            return
         ret, frame = self.cap.read()
         if ret:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -304,18 +303,65 @@ class VentanaMenu:
             self.label_fondo.config(image=imgtk)
         else:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        self._after_id = self.menu.after(20, self.actualizar_fondo)
+        self.menu.after(20, self.actualizar_fondo)
 
     def About(self):
         about = tk.Toplevel(self.menu)
-        about.title("About")
-        about.geometry("500x350")
-        tk.Label(about, text="Johan Jiménez Corella y Kendall Mena Arias",
-                 font=("Arial", 12)).pack(pady=40)
+        about.title("Acerca del Autor")
+        about.geometry("600x500")
+
+        # === Fondo de la ventana About ===
+        try:
+            fondo = Image.open("fondocielo.jpg")
+            fondo = fondo.resize((600, 500))
+            fondo_img = ImageTk.PhotoImage(fondo)
+            label_fondo = tk.Label(about, image=fondo_img)
+            label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+            label_fondo.lower()  # 🔹 Envía el fondo detrás de todo
+            about.fondo_img = fondo_img
+        except:
+            about.configure(bg="lightblue")
+
+
+
+        # === Botón Cerrar en la esquina superior derecha ===
+        boton_cerrar = tk.Button(
+            about, text="atrás", command=about.destroy,
+            font=("Arial", 10, "bold"), bg="lightgray", fg="black", width=3
+        )
+        boton_cerrar.place(x=20, y=10)  # 🔹 Posición en esquina superior derecha
+
+        tk.Label(about, text="Información del Proyecto", font=("Arial", 16, "bold")).pack(pady=10)
+        try:
+            imagen = Image.open("image_About.jpg")  
+            imagen = imagen.resize((250, 200))
+            img = ImageTk.PhotoImage(imagen)
+            tk.Label(about, image=img).pack(pady=5)
+            about.img = img
+        except:
+            tk.Label(about, text="[Foto del Autor Aquí]", font=("Arial", 12, "italic")).pack(pady=5)
+
+        marco = tk.Frame(about, bg="sky blue")
+        marco.pack(pady=10, fill="both", expand=True, padx=20)
+
+        datos = [
+            ("Autores:", "Johan Jiménez Corella y Kendall Mena Arias"),
+            ("Identificación:", "2025080849,     2025095924"),
+            ("Asignatura:", "Fundamentos de sistemas computacionales "),
+            ("Carrera:", "Computadores(CE)"),
+            ("Año:", "2025"),
+            ("Profesor:", "Luis Barboza"),
+            ("País de Producción:", "Costa Rica"),
+        ]
+
+        for etiqueta, valor in datos:
+            contenedor = tk.Frame(marco, bg="black")
+            contenedor.pack(anchor="w", pady=3)
+            tk.Label(contenedor, text=etiqueta, font=("Arial", 12, "bold"), bg="sky blue").pack(side="left")
+            tk.Label(contenedor, text=valor, font=("Arial", 12), bg="sky blue").pack(side="left", padx=5)
+
 
     def ir_a_principal(self):
-        # Cancel any pending after callbacks
-        self.menu.after_cancel(self._after_id)
         self.cap.release()
         self.menu.destroy()
         app = VentanaPrincipal()
@@ -323,6 +369,7 @@ class VentanaMenu:
 
     def ejecutar(self):
         self.menu.mainloop()
+
 
 # -------------------- CLASE PRINCIPAL --------------------
 class VentanaPrincipal:
@@ -369,9 +416,6 @@ class VentanaPrincipal:
         # start polling incoming messages from Raspberry
         self.ventana.after(200, self.check_messages)
 
-        # Botón "About"
-        self.boton_about = tk.Button(self.ventana, text="About", command=self.About, bg="white")
-        self.boton_about.place(x=50, y=30, anchor="se")
 
         # Imagen y botón de Equipo1
         img_equipo1 = Image.open("equipo1.png").resize((150, 150))
@@ -381,10 +425,14 @@ class VentanaPrincipal:
         self.boton1.place(x=200, y=300, anchor="se")
 
         # Botón para Equipo2
-        self.boton2 = tk.Button(self.ventana, text="Equipo2",
-                                command=self.Equipo2, bg="white", height=20, width=20)
-        self.boton2.place(x=500, y=400, anchor="se")
+        img_equipo2 = Image.open("equipo2.png").resize((150,150))
+        self.img_equipo2_tk=ImageTk.PhotoImage(img_equipo2)
+        self.boton2 = tk.Button(self.ventana,
+                                 image=self.img_equipo2_tk,
+                                borderwidth=0, command=self.Equipo2)
+        
 
+        self.boton2.place(x=500, y=300, anchor="se")
         # Imagen y botón de Equipo3
         img_equipo3 = Image.open("equipo3.png").resize((150, 150))
         self.img_equipo3_tk = ImageTk.PhotoImage(img_equipo3)
@@ -404,14 +452,8 @@ class VentanaPrincipal:
             self.label_fondo.config(image=imgtk)
         else:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        self._after_id = self.ventana.after(20, self.actualizar_video)
+        self._after_id = self.ventana.after(10, self.actualizar_video)
 
-    def About(self):
-        about = tk.Toplevel(self.ventana)
-        about.title("About")
-        about.geometry("500x350")
-        tk.Label(about, text="Johan Jiménez Corella y Kendall Mena Arias",
-                 font=("Arial", 12)).pack(pady=40)
 
     # Crear ventanas de equipos
     def Equipo1(self):
@@ -429,11 +471,13 @@ class VentanaPrincipal:
     def Equipo2(self):
         VentanaEquipo(
             self.ventana,
-            titulo="Equipo 2",
+            titulo="Dragon ball",
             imagenes=["pateador2_1.png", "pateador2_2.png", "pateador2_3.png"],
-            nombres=["Jason good", "Luis Barboza", "Jugador2-3"],
+            nombres=["Goku", "Vegueta", "Broly"],
+            sonido="sonidoequipo2.mp3",
+            video_path="fondo_equipo2.mp4",
             imagenes_porteros=["portero2_1.png", "portero2_2.png", "portero2_3.png"],
-            nombres_porteros=["Portero2-1", "Portero2-2", "Portero2-3"]
+            nombres_porteros=["Maestro Roshi", "Majin buu", "Krillin"]
         )
 
     def Equipo3(self):
@@ -443,6 +487,7 @@ class VentanaPrincipal:
             imagenes=["pateador3_1.png", "pateador3_2.png", "pateador3_3.png"],
             nombres=["Jhonny", "Ricardo", "Jordi"],
             sonido="sonidoequipo3.mp3",
+            video_path="fondo_equipo3.mp4",
             imagenes_porteros=["portero3_1.png", "portero3_2.png", "portero3_3.png"],
             nombres_porteros=["Lana", "Mia", "LilMilk"]
         )
